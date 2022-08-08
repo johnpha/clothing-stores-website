@@ -142,4 +142,58 @@ export default function PlaceOrderScreen() {
 							</ListGroup>
 							<Link to="/cart">Edit</Link>
 						</Card.Body>
-					</
+					</Card>
+				</Col>
+				<Col md={4}>
+					<Card>
+						<Card.Body>
+							<Card.Title>Order Summary</Card.Title>
+							<ListGroup variant="flush">
+								<ListGroup.Item>
+									<Row>
+										<Col>Items</Col>
+										<Col>${cart.itemsPrice.toFixed(2)}</Col>
+									</Row>
+								</ListGroup.Item>
+								<ListGroup.Item>
+									<Row>
+										<Col>Shipping</Col>
+										<Col>${cart.shippingPrice.toFixed(2)}</Col>
+									</Row>
+								</ListGroup.Item>
+								<ListGroup.Item>
+									<Row>
+										<Col>Tax</Col>
+										<Col>${cart.taxPrice.toFixed(2)}</Col>
+									</Row>
+								</ListGroup.Item>
+								<ListGroup.Item>
+									<Row>
+										<Col>
+											<strong>Order Total</strong>
+										</Col>
+										<Col>
+											<strong>${cart.totalPrice.toFixed(2)}</strong>
+										</Col>
+									</Row>
+								</ListGroup.Item>
+								<ListGroup.Item>
+									<div className="d-grid">
+										<Button
+											type="button"
+											onClick={placeOrderHandler}
+											disabled={cart.cartItems.length === 0}
+										>
+											Place Order
+										</Button>
+									</div>
+									{loading && <LoadingBox></LoadingBox>}
+								</ListGroup.Item>
+							</ListGroup>
+						</Card.Body>
+					</Card>
+				</Col>
+			</Row>
+		</div>
+	);
+}
