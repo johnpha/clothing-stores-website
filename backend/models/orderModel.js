@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema(
 	{
-		orderitems: [
+		orderItems: [
 			{
 				slug: { type: String, required: true },
 				name: { type: String, required: true },
@@ -30,8 +30,8 @@ const orderSchema = new mongoose.Schema(
 			update_time: String,
 			email_address: String,
 		},
-		itemPrice: { type: Number, required: true },
-		shippingAddress: { type: Number, required: true },
+		itemsPrice: { type: Number, required: true },
+		shippingPrice: { type: Number, required: true },
 		taxPrice: { type: Number, required: true },
 		totalPrice: { type: Number, required: true },
 		user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -45,6 +45,7 @@ const orderSchema = new mongoose.Schema(
 		timestamps: true,
 	}
 );
-const Order = mongoose.model('Order', userSchema);
+
+const Order = mongoose.model('Order', orderSchema);
 
 export default Order;

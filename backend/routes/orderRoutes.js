@@ -1,7 +1,7 @@
 import express from 'express';
 import expressAsyncHandler from 'express-async-handler';
-import Order from '../models/orderModel';
-import { isAuth } from '../util';
+import Order from '../models/orderModel.js';
+import { isAuth } from '../util.js';
 
 const orderRouter = express.Router();
 orderRouter.post(
@@ -18,8 +18,53 @@ orderRouter.post(
 			totalPrice: req.body.totalPrice,
 			user: req.user._id,
 		});
-		const order = newOrder.save();
+		const order = await newOrder.save();
 		res.status(201).send({ message: 'New Order Create', order });
 	})
 );
+
+orderRouter.get(
+	'/mine',
+	isAuth,
+	expressAsyncHandler(async (req, res) => {
+		const orders = await Order.find({ user: req.user._id });
+		res.send(orders);
+	})
+);
+
+orderRouter.get(
+	'/:id',
+	isAuth,
+	expressAsyncHandler(async (req, res) => {
+		const order = await Order.findById(req.params.id);
+		if (order) {
+			res.send(order);
+		} else {
+			res.status(404).send({ message: 'Order not found' });
+		}
+	})
+);
+orderRouter.put(
+	'/:id/pay',
+	isAuth,
+	expressAsyncHandler(async (req, res) => {
+		const order = await Order.findById(req.params.id);
+		if (order) {
+			order.isPaid = true;
+			order.paidAt = Date.now();
+			order.paymentResult = {
+				id: req.body.id,
+				status: req.body.status,
+				update_time: req.body.update_time,
+				email_address: req.body.email_address,
+			};
+
+			const updatedOrder = await order.save();
+			res.send({ message: 'Order Paid', order: updatedOrder });
+		} else {
+			res.status(404).send({ message: 'Order not found' });
+		}
+	})
+);
+
 export default orderRouter;
