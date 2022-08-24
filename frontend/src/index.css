@@ -85,3 +85,7 @@ main {
 .active-nav {
 	left: 0;
 }
+.text-bold {
+	color: purple;
+	font-weight: bold;
+}

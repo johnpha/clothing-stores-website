@@ -2,9 +2,51 @@ import express from 'express';
 import User from '../models/userModel.js';
 import bcrypt from 'bcryptjs';
 import expressAsyncHandler from 'express-async-handler';
-import { generateToken, isAuth } from '../util.js';
+import { generateToken, isAdmin, isAuth } from '../util.js';
 
 const userRouter = express.Router();
+
+userRouter.get(
+	'/',
+	isAuth,
+	isAdmin,
+	expressAsyncHandler(async (req, res) => {
+		const users = await User.find();
+		res.send(users);
+	})
+);
+
+userRouter.get(
+	'/:id',
+	isAuth,
+	isAdmin,
+	expressAsyncHandler(async (req, res) => {
+		const user = await User.findById(req.params.id);
+		if (user) {
+			res.send(user);
+		} else {
+			res.status(404).send({ message: 'User not found' });
+		}
+	})
+);
+
+userRouter.put(
+	'/:id',
+	isAuth,
+	isAdmin,
+	expressAsyncHandler(async (req, res) => {
+		const user = await User.findById(req.params.id);
+		if (user) {
+			user.name = req.body.name || user.name;
+			user.email = req.body.email || user.email;
+			user.isAdmin = Boolean(req.body.isAdmin);
+			const updatedUser = await user.save();
+			res.send({ message: 'User Updated', user: updatedUser });
+		} else {
+			res.status(404).send({ message: 'User not found' });
+		}
+	})
+);
 
 userRouter.post(
 	'/signin',
@@ -41,6 +83,25 @@ userRouter.post(
 			isAdmin: user.isAdmin,
 			token: generateToken(user),
 		});
+	})
+);
+
+userRouter.delete(
+	'/:id',
+	isAuth,
+	isAdmin,
+	expressAsyncHandler(async (req, res) => {
+		const user = await User.findById(req.params.id);
+		if (user) {
+			if (user.email === 'admin@gmail.com') {
+				res.status(400).send({ message: 'Can not delete Admin user' });
+				return;
+			}
+			await user.remove();
+			res.send({ message: 'User Delelted' });
+		} else {
+			res.status(404).send({ message: 'User not found' });
+		}
 	})
 );
 
