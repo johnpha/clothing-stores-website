@@ -13,6 +13,7 @@ export default function ShippingAddressScreen() {
 	const {
 		cart: { shippingAddress },
 		userInfo,
+		fullBox,
 	} = state;
 
 	const [fullName, setFullName] = useState(shippingAddress.fullName || '');
@@ -39,14 +40,25 @@ export default function ShippingAddressScreen() {
 				city,
 				postalCode,
 				country,
+				location: shippingAddress.location,
 			},
 		});
 		localStorage.setItem(
 			'shippingAddress',
-			JSON.stringify({ fullName, address, city, postalCode, country })
+			JSON.stringify({
+				fullName,
+				address,
+				city,
+				postalCode,
+				country,
+				location: shippingAddress.location,
+			})
 		);
 		navigate('/payment');
 	};
+	useEffect(() => {
+		ctxDispatch({ type: 'SET_FULLBOX_OFF' });
+	}, [ctxDispatch, fullBox]);
 
 	return (
 		<div>
@@ -93,6 +105,23 @@ export default function ShippingAddressScreen() {
 							onChange={(e) => setCountry(e.target.value)}
 						></Form.Control>
 					</Form.Group>
+					<div className="mb-3">
+						<Button
+							id="chooseOnMap"
+							type="button"
+							onClick={() => navigate('/map')}
+						>
+							Choose Location On Map
+						</Button>
+						{shippingAddress.location && shippingAddress.location.lat ? (
+							<div>
+								Lat: {shippingAddress.location.lat}
+								LNG: {shippingAddress.location.lng}
+							</div>
+						) : (
+							<div>No Location</div>
+						)}
+					</div>
 					<div className="mb-3">
 						<Button variant="primary" type="submit">
 							Countinue

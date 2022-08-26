@@ -1,6 +1,12 @@
 import axios from 'axios';
-import React, { useContext, useEffect, useReducer } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, {
+	useContext,
+	useEffect,
+	useReducer,
+	useRef,
+	useState,
+} from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import ListGroup from 'react-bootstrap/ListGroup';
@@ -8,14 +14,25 @@ import Card from 'react-bootstrap/Card';
 import Badge from 'react-bootstrap/Badge';
 import Button from 'react-bootstrap/Button';
 import Rating from '../components/Rating';
+import Form from 'react-bootstrap/Form';
+import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import { Helmet } from 'react-helmet-async';
 import LoadingBox from '../components/LoadingBox';
 import MessageBox from '../components/MessageBox';
 import { getError } from '../utils';
 import { Store } from '../Store';
+import { toast } from 'react-toastify';
 
 const reducer = (state, action) => {
 	switch (action.type) {
+		case 'REFRESH_PRODUCT':
+			return { ...state, product: action.payload };
+		case 'CREATE_REQUEST':
+			return { ...state, loadingCreateReview: true };
+		case 'CREATE_SUCCESS':
+			return { ...state, loadingCreateReview: false };
+		case 'CREATE_FAIL':
+			return { ...state, loadingCreateReview: false };
 		case 'FETCH_REQUEST':
 			return { ...state, loading: true };
 		case 'FETCH_SUCCESS':
@@ -28,15 +45,22 @@ const reducer = (state, action) => {
 };
 
 export default function ProductScreen() {
+	const reviewsRef = useRef();
+
+	const [rating, setRating] = useState(0);
+	const [comment, setComment] = useState('');
+	const [selectedImage, setSelectedImage] = useState('');
+
 	const navigate = useNavigate();
 	const params = useParams();
 	const { slug } = params;
 
-	const [{ loading, error, product }, dispatch] = useReducer(reducer, {
-		product: '',
-		loading: true,
-		error: '',
-	});
+	const [{ loading, error, product, loadingCreateReview }, dispatch] =
+		useReducer(reducer, {
+			product: '',
+			loading: true,
+			error: '',
+		});
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -52,7 +76,7 @@ export default function ProductScreen() {
 	}, [slug]);
 
 	const { state, dispatch: ctxDispatch } = useContext(Store);
-	const { cart } = state;
+	const { cart, userInfo } = state;
 
 	const addToCartHandler = async () => {
 		const existItem = cart.cartItems.find((x) => x._id === product._id);
@@ -73,6 +97,40 @@ export default function ProductScreen() {
 		navigate('/cart');
 	};
 
+	const submitHandler = async (e) => {
+		e.preventDefault();
+		if (!comment || !rating) {
+			toast.error('Please enter comment and rating');
+			return;
+		}
+		try {
+			const { data } = await axios.post(
+				`/api/products/${product._id}/reviews`,
+				{
+					rating,
+					comment,
+					name: userInfo.name,
+				},
+				{
+					headers: { Authorization: `Bearer ${userInfo.token}` },
+				}
+			);
+			dispatch({ type: 'CREATE_SUCCESS' });
+			toast.success('Review submitted successfully');
+			product.reviews.unshift(data.review);
+			product.numReviews = data.numReviews;
+			product.rating = data.rating;
+			dispatch({ type: 'REFRESH_PRODUCT', payload: product });
+			window.scrollTo({
+				behavior: 'smooth',
+				top: reviewsRef.current.offsetTop,
+			});
+		} catch (error) {
+			toast.error(getError(error));
+			dispatch({ type: 'CREATE_FAIL' });
+		}
+	};
+
 	return loading ? (
 		<LoadingBox></LoadingBox>
 	) : error ? (
@@ -83,7 +141,7 @@ export default function ProductScreen() {
 				<Col md={6}>
 					<img
 						className="img-large"
-						src={product.image}
+						src={selectedImage || product.image}
 						alt={product.name}
 					></img>
 				</Col>
@@ -102,6 +160,29 @@ export default function ProductScreen() {
 							></Rating>
 						</ListGroup.Item>
 						<ListGroup.Item>Price: ${product.price}</ListGroup.Item>
+
+						<ListGroup.Item>
+							<Row xs={1} md={2} className="g-2">
+								{[product.image, ...product.images].map((x) => (
+									<Col key={x}>
+										<Card>
+											<Button
+												className="thumbnail"
+												type="button"
+												onClick={() => setSelectedImage(x)}
+											>
+												<Card.Img
+													variant="top"
+													src={x}
+													alt="product"
+												></Card.Img>
+											</Button>
+										</Card>
+									</Col>
+								))}
+							</Row>
+						</ListGroup.Item>
+
 						<ListGroup.Item>
 							Description:
 							<p>{product.description}</p>
@@ -144,6 +225,72 @@ export default function ProductScreen() {
 					</Card>
 				</Col>
 			</Row>
+			<div className="my-3">
+				<h2 ref={reviewsRef}> Reviews</h2>
+				<div className="mb-3">
+					{product.reviews.length === 0 && (
+						<MessageBox>There is no review</MessageBox>
+					)}
+				</div>
+				<ListGroup>
+					{product.reviews.map((review) => (
+						<ListGroup.Item key={review._id}>
+							<strong>{review.name}</strong>
+							<Rating rating={review.rating} caption=""></Rating>
+							<p>{review.createdAt.substring(0, 10)}</p>
+							<p>{review.comment}</p>
+						</ListGroup.Item>
+					))}
+				</ListGroup>
+				<div clasName="my-3">
+					{userInfo ? (
+						<Form onSubmit={submitHandler}>
+							<h2>Write a customer review</h2>
+							<Form.Group className="mb-3" controlId="rating">
+								<Form.Label>Rating</Form.Label>
+								<Form.Select
+									aria-label="rating"
+									value={rating}
+									onChange={(e) => setRating(e.target.value)}
+								>
+									<option value="">Select...</option>
+									<option value="1">1 - Poor</option>
+									<option value="2">2 - Fair</option>
+									<option value="3">3 - Good</option>
+									<option value="4">4 - Very good</option>
+									<option value="5">5 - Excelent</option>
+								</Form.Select>
+							</Form.Group>
+							<FloatingLabel
+								controlId="floatingTextarea"
+								label="Comments"
+								className="mb-3"
+							>
+								<Form.Control
+									as="textarea"
+									placeHolder="Leave a comment here"
+									value={comment}
+									onChange={(e) => setComment(e.target.value)}
+								></Form.Control>
+							</FloatingLabel>
+							<div className="mb-3">
+								<Button disabled={loadingCreateReview} type="submit">
+									Submit
+								</Button>
+								{loadingCreateReview && <LoadingBox></LoadingBox>}
+							</div>
+						</Form>
+					) : (
+						<MessageBox>
+							Please{' '}
+							<Link to={`/signin?redirect=/product/${product.slug}`}>
+								Sign In
+							</Link>{' '}
+							to write a review
+						</MessageBox>
+					)}
+				</div>
+			</div>
 		</div>
 	);
 }
